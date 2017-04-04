@@ -1,7 +1,7 @@
 ﻿$modulePath = $PSScriptRoot
 write-verbose "Importing variables from $modulePath/lib/secrets.json"
 New-VariableFromJson "$modulePath/lib/defaults.json", "$modulePath/lib/secrets.json"
-
+[Console]::WriteLine("Module loading from $modulePath $cachepath $serviceinterval")
 function Set-PSResultCachedValue {
     [CmdletBinding()]param(
         [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][PSCustomObject]$cache,
@@ -43,8 +43,8 @@ function Get-PSResultCacheFiles {
     [CmdletBinding()]param(
         [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][PSCustomObject]$cache
     )
-    if (![string]::IsNullOrEmpty($script:cachepath) -and (Test-Path $script:cachepath)) {
-        Get-ChildItem ([IO.Path]::Combine($script:cachepath , $cache.filepattern)) | where Name -notmatch 'config.json$' | sort LastWriteTime -Descending
+    if (![string]::IsNullOrEmpty($cachepath) -and (Test-Path $cachepath)) {
+        Get-ChildItem ([IO.Path]::Combine($cachepath , $cache.filepattern)) | where Name -notmatch 'config.json$' | sort LastWriteTime -Descending
     }
 }
 
@@ -59,7 +59,7 @@ function Get-NextPSResultCacheFile {
     [CmdletBinding()]param(
         [Parameter(Mandatory=$true)][ValidateNotNullOrEmpty()][PSCustomObject]$cache
     )
-    [IO.Path]::Combine($script:cachepath , ($cache.filepattern -replace [Regex]::Escape('*'), (Get-Date -format yyyyMMdd-hhmmss)))
+    [IO.Path]::Combine($cachepath , ($cache.filepattern -replace [Regex]::Escape('*'), (Get-Date -format yyyyMMdd-HHmmss)))
 }
 
 function Optimize-PSResultCache {
@@ -85,10 +85,12 @@ function Test-PSResultMemoryCache {
     $date = Get-PSResultCacheDate $cache
     $v = Get-PSResultCachedValue $cache
     if ($date -eq $null -or $v -eq $null) {
+        Write-Verbose "Memory cache $($cache.name) is empty"
         return $false;
     } else {
         $span = (Get-Date) - $date
-        Write-Verbose "Memory cache $($cache.name) ttl $($ttl.TotalSeconds) age $($span.TotalSeconds) $(@{$true='out of date';$false=''}[$span -ge $ttl])"
+        $span = [TimeSpan]::FromSeconds([Math]::Round($span.TotalSeconds))
+        Write-Verbose "Memory cache $($cache.name) ttl $ttl age $span $(@{$true='out of date';$false=''}[$span -ge $ttl])"
         return $span -lt $ttl
     }
 }
@@ -100,9 +102,10 @@ function Test-PSResultDiskCache {
     $f = Get-CurrentPSResultCacheFile $cache
     if ($f) {
         $ttl = Get-PSResultCacheTtl $cache
-        $date = Get-PSResultCacheDate $f.LastWriteTime
-        $span = (Get-Date) - $f.LastWriteTime
-        write-verbose "Cache file $($f.name) $date $(@{$true='out of date';$false=''}[$span -ge $ttl])"
+        $date = $f.LastWriteTime
+        $span = (Get-Date) - $date
+        $span = [TimeSpan]::FromSeconds([Math]::Round($span.TotalSeconds))
+        write-verbose "Cache file $($f.name) $date ttl $ttl $($ttl.TotalSeconds) age $span $(@{$true='out of date';$false=''}[$span -ge $ttl])"
         return $span -lt $ttl
     } else {
         write-verbose "Cache file not found for $($cache.name)"
@@ -119,11 +122,12 @@ function Update-PSResultCacheFile {
     if ($v -eq $null) {
         $v = New-Object PSCustomObject
     }
-    if (!(Test-Path $script:cachepath)) { mkdir $script:cachepath }
+    if (!(Test-Path $cachepath)) { mkdir $cachepath }
     $f = Get-NextPSResultCacheFile $cache
     write-verbose "Saving file $f"
-    $v | ConvertTo-Json | Set-Content $f -Encoding UTF8
+    $v | ConvertTo-Json | Set-Content $f -Encoding UTF8 -Force
     Set-PSResultCachedValue $cache $v
+    Optimize-PSResultCache $cache
 }
 
 function Get-PSResultCache {
@@ -152,12 +156,13 @@ function Get-PSResultCache {
 function Update-PSResultCacheDirectory {
     [CmdletBinding()]param(
     )
-    if ((Test-Path $script:cachepath)) {
-        $l = Get-ChildItem ([IO.Path]::Combine($script:cachepath , '*.config.json')) | sort Name
+    if ((Test-Path $cachepath)) {
+        $l = Get-ChildItem ([IO.Path]::Combine($cachepath , '*.config.json')) | sort Name
         $l | % {
             try {
                 $cache = gc -Path $_ -Raw | convertfrom-json
                 if (!(Test-PSResultDiskCache $cache)) {
+                    [Console]::WriteLine("Update-PSResultCacheDirectory $($cache.name)")
                     Update-PSResultCacheFile $cache
                     $log = $cache | select name, filepattern, getterfunction,
                     @{
@@ -169,7 +174,7 @@ function Update-PSResultCacheDirectory {
                     @{
                         n='value';e={ $_.value.GetType().Name }
                     }
-                    Add-Content -Path ([IO.Path]::Combine($script:cachepath , 'cache.log')) -value ($log | convertto-json -Compress)
+                    Add-Content -Path ([IO.Path]::Combine($cachepath , 'cache.log')) -value ($log | convertto-json -Compress) -Force
                 }
             } catch {
                 Write-Warning ($_ | out-string)
@@ -192,7 +197,10 @@ function Get-PSResultCacheTestValues {
 function Update-PSResultCacheDirectoryForever {
     [CmdletBinding()]param(
     )
+    if (!(Test-Path $cachepath)) { mkdir $cachepath }
     $ttl = [TimeSpan]::Parse($serviceinterval)
+    $log = New-Object PSCustomObject -Property @{'path'=$cachepath;'ttl'=('{0:c}' -f $ttl)}
+    Add-Content -Path ([IO.Path]::Combine($cachepath , 'cache.log')) -value ($log | convertto-json -Compress) -Force
     while ($true) {
         try {
             Update-PSResultCacheDirectory

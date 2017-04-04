@@ -15,7 +15,7 @@ Describe 'Unit Tests' {
         $v = Get-PSResultCache $testcache -Verbose
         $v.counter | should be 1
     }
-    it 'Gets updated values' -skip {
+    it 'Gets updated values' {
         Start-Sleep -Seconds $ttl.TotalSeconds
         $v = Get-PSResultCache $testcache -Verbose
         $v.counter | should be 2
