@@ -1,0 +1,46 @@
+﻿{
+	"PSDefaultParameterValues" : {
+		"New-ModuleManifest" : {
+			"Path" : "PSResultCache.psd1",
+			"NestedModules" : null,
+			"Guid" : "9f5e533a-82c6-496a-a4c5-65e5aaee240d",
+			"Author" : "John Capehart",
+			"CompanyName" : null,
+			"Copyright" : null,
+			"RootModule" : "PSResultCache.psm1",
+			"ModuleVersion" : "0.1.5.1",
+			"Description" : "Module for caching values",
+			"ProcessorArchitecture" : "Amd64",
+			"PowerShellVersion" : "4.0",
+			"ClrVersion" : null,
+			"DotNetFrameworkVersion" : "4.0",
+			"PowerShellHostName" : null,
+			"PowerShellHostVersion" : null,
+			"RequiredModules" : null,
+			"TypesToProcess" : null,
+			"FormatsToProcess" : null,
+			"ScriptsToProcess" : null,
+			"RequiredAssemblies" : null,
+			"FileList" : null,
+			"ModuleList" : null,
+            "FunctionsToExport":  null,
+			"AliasesToExport" : null,
+			"VariablesToExport" : null,
+			"CmdletsToExport" : null,
+			"DscResourcesToExport" : null,
+			"PrivateData" : null,
+			"Tags" : null,
+			"ProjectUri" : null,
+			"LicenseUri" : null,
+			"IconUri" : null,
+			"ReleaseNotes" : null,
+			"HelpInfoUri" : null,
+			"DefaultCommandPrefix" : null
+		},
+		"Publish-Module" : {
+			"ModuleName" : "PSResultCache",
+			"BinarySourceDirectory" : "lib",
+			"BuildTargets" : ""
+		}
+	}
+}

@@ -1,0 +1,10 @@
+{
+    "testcache" :{
+        "name":  "PSResultCacheTest",
+        "filepattern":  "PSResultCacheTest*.json",
+        "getterfunction":  "Get-PSResultCacheTestValues",
+        "ttl":  "00:00:06",
+        "value":  null,
+        "timestamp":  null
+    }
+}

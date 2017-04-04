@@ -1,0 +1,15 @@
+.idea/
+.tmp/
+.vs/
+bin/
+obj/
+node_modules/
+bower_components/
+packages/
+public/
+dist/
+*secret*
+*delete*
+*snippets*
+npm-debug.log
+coverage
